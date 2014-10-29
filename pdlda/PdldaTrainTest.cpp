@@ -95,7 +95,9 @@ int main(int argc, char **argv) {
 
 				MPI_Barrier(MPI_COMM_WORLD);
 
-				TVectorPool::inst->cacheCurrentDocState4Update();
+				if(gibbs + 1 == gibbs_iter) {
+					TVectorPool::inst->cacheCurrentDocState4Update();
+				}
 			} else {
 				CntrServer::inst->listen(TaskAssigner::inst->numSamp, 0);
 				MPI_Barrier(MPI_COMM_WORLD);
