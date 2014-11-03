@@ -1,0 +1,8 @@
+#ifndef TRAINCONFIG_H_
+#define TRAINCONFIG_H_
+
+#define BOOKLOADER_SHUFFLE_WORD_ORDER
+
+#define BOOKLOADER_SHRINK_SPACE
+
+#endif
