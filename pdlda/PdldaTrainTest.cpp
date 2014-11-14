@@ -29,6 +29,10 @@ static TCLAP::ValueArg<num> gibbs_iterArg("g", "gibbs_iter",
 		"Number of Gibbs iterations", true, 0, "integer");
 REGISTER_ARG(gibbs_iterArg)
 
+static TCLAP::ValueArg<num> smooth_iterArg("S", "smooth_iter",
+		"Number of Gibbs iterations to use for smoothing EM update", true, 0, "integer");
+REGISTER_ARG(smooth_iterArg)
+
 static TCLAP::ValueArg<num> gibbs_iterArg_test("G", "gibbs_iter_test",
 		"Number of Gibbs iterations for testing", true, 0, "integer");
 REGISTER_ARG(gibbs_iterArg_test)
@@ -46,7 +50,7 @@ int main(int argc, char **argv) {
 	BookLoader bookL;
 	TVectorPool tVectorPool;
 	DocState docState;
-	CntrServer cntrServer;
+	CntrServer_simp CntrServer_simp;
 	Sampler sampler;
 
 	std::stringstream ss;
@@ -58,6 +62,7 @@ int main(int argc, char **argv) {
 
 	num em_iter = em_iterArg.getValue();
 	num gibbs_iter = gibbs_iterArg.getValue();
+	num smooth_iter = smooth_iterArg.getValue();
 	num gibbs_iter_test = gibbs_iterArg_test.getValue();
 	num em_iter_test = em_iterArg_test.getValue();
 
@@ -66,7 +71,7 @@ int main(int argc, char **argv) {
 	if (TaskAssigner::inst->isSamp) {
 		Sampler::inst->initDocStates();
 	} else {
-		CntrServer::inst->listen(0, CntrServer::inst->opNum_l);
+		CntrServer_simp::inst->listen(0, CntrServer_simp::inst->opNum_l);
 	}
 
 	ss << getCurrentTimeString() << " @ " << (int) TaskAssigner::inst->rank
@@ -95,15 +100,15 @@ int main(int argc, char **argv) {
 
 				MPI_Barrier(MPI_COMM_WORLD);
 
-				if(gibbs + 1 == gibbs_iter) {
+				if(gibbs + smooth_iter >= gibbs_iter) {
 					TVectorPool::inst->cacheCurrentDocState4Update();
 				}
 			} else {
-				CntrServer::inst->listen(TaskAssigner::inst->numSamp, 0);
+				CntrServer_simp::inst->listen(TaskAssigner::inst->numSamp, 0);
 				MPI_Barrier(MPI_COMM_WORLD);
 
-				CntrServer::inst->listen(CntrServer::inst->opNum_l,
-						CntrServer::inst->opNum_l);
+				CntrServer_simp::inst->listen(CntrServer_simp::inst->opNum_l,
+						CntrServer_simp::inst->opNum_l);
 
 				MPI_Barrier(MPI_COMM_WORLD);
 
@@ -152,8 +157,8 @@ int main(int argc, char **argv) {
 				}
 				Sampler::inst->judgeTest();
 			} else {
-				CntrServer::inst->listen(
-						CntrServer::inst->opNum_l_test * gibbs_iter_test, 0);
+				CntrServer_simp::inst->listen(
+						CntrServer_simp::inst->opNum_l_test * gibbs_iter_test, 0);
 			}
 
 //			ss << getCurrentTimeString() << " @ " << TaskAssigner::inst->rank
