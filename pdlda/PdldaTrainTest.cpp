@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
 	BookLoader bookL;
 	TVectorPool tVectorPool;
 	DocState docState;
-	CntrServer_simp CntrServer_simp;
+	CntrServer CntrServer;
 	Sampler sampler;
 
 	std::stringstream ss;
@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
 	if (TaskAssigner::inst->isSamp) {
 		Sampler::inst->initDocStates();
 	} else {
-		CntrServer_simp::inst->listen(0, CntrServer_simp::inst->opNum_l);
+		CntrServer::inst->listen(0, CntrServer::inst->opNum_l);
 	}
 
 	ss << getCurrentTimeString() << " @ " << (int) TaskAssigner::inst->rank
@@ -104,11 +104,11 @@ int main(int argc, char **argv) {
 					TVectorPool::inst->cacheCurrentDocState4Update();
 				}
 			} else {
-				CntrServer_simp::inst->listen(TaskAssigner::inst->numSamp, 0);
+				CntrServer::inst->listen(TaskAssigner::inst->numSamp, 0);
 				MPI_Barrier(MPI_COMM_WORLD);
 
-				CntrServer_simp::inst->listen(CntrServer_simp::inst->opNum_l,
-						CntrServer_simp::inst->opNum_l);
+				CntrServer::inst->listen(CntrServer::inst->opNum_l,
+						CntrServer::inst->opNum_l);
 
 				MPI_Barrier(MPI_COMM_WORLD);
 
@@ -156,8 +156,8 @@ int main(int argc, char **argv) {
 				}
 				Sampler::inst->judgeTest();
 			} else {
-				CntrServer_simp::inst->listen(
-						CntrServer_simp::inst->opNum_l_test * gibbs_iter_test, 0);
+				CntrServer::inst->listen(
+						CntrServer::inst->opNum_l_test * gibbs_iter_test, 0);
 			}
 
 //			ss << getCurrentTimeString() << " @ " << TaskAssigner::inst->rank

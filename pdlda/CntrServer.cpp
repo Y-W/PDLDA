@@ -1,5 +1,5 @@
 /*
- * CntrServer_simp.cpp
+ * CntrServer.cpp
  *
  *  Created on: Jul 28, 2014
  *      Author: yw
@@ -19,9 +19,9 @@
 
 using namespace pdlda;
 
-CntrServer_simp* CntrServer_simp::inst;
+CntrServer* CntrServer::inst;
 
-CntrServer_simp::CntrServer_simp() {
+CntrServer::CntrServer() {
 	wordUDist = new num*[BookLoader::inst->numWord];
 	for (word_id i = 0; i < BookLoader::inst->numWord; i++) {
 		if (TaskAssigner::inst->getCntrId(i) == TaskAssigner::inst->rank) {
@@ -36,10 +36,10 @@ CntrServer_simp::CntrServer_simp() {
 	opNum_s = estimateOpNum_s();
 	opNum_l_test = estimateOpNum_l_test();
 
-	CntrServer_simp::inst = this;
+	CntrServer::inst = this;
 }
 
-CntrServer_simp::~CntrServer_simp() {
+CntrServer::~CntrServer() {
 	for (word_id i = 0; i < BookLoader::inst->numWord; i++) {
 		if (wordUDist[i] != NULL) {
 			delete[] wordUDist[i];
@@ -52,7 +52,7 @@ static void callbackFunc(bool& i, void* buf, MPI_Status* status) {
 	delete[] (num*) buf;
 }
 
-void CntrServer_simp::listen(num numFetch, num numUpdate) {
+void CntrServer::listen(num numFetch, num numUpdate) {
 	RequestPool<bool> sendReqs(TaskAssigner::inst->numSamp, &callbackFunc);
 
 	// fetch
@@ -170,7 +170,7 @@ void CntrServer_simp::listen(num numFetch, num numUpdate) {
 	sendReqs.waitTillClear();
 }
 
-num CntrServer_simp::estimateOpNum_l() {
+num CntrServer::estimateOpNum_l() {
 	num sum = 0;
 	for (word_id i = 0; i < BookLoader::inst->numWord; i++) {
 		if (TaskAssigner::inst->getCntrId(i) == TaskAssigner::inst->rank) {
@@ -180,7 +180,7 @@ num CntrServer_simp::estimateOpNum_l() {
 	return sum;
 }
 
-num CntrServer_simp::estimateOpNum_l_test() {
+num CntrServer::estimateOpNum_l_test() {
 	num sum = 0;
 	for (word_id i = 0; i < BookLoader::inst->numWord; i++) {
 		if (TaskAssigner::inst->getCntrId(i) == TaskAssigner::inst->rank) {
@@ -190,7 +190,7 @@ num CntrServer_simp::estimateOpNum_l_test() {
 	return sum;
 }
 
-num CntrServer_simp::estimateOpNum_s() {
+num CntrServer::estimateOpNum_s() {
 	num sum = 0;
 	for (word_id i = 0; i < BookLoader::inst->numWord; i++) {
 		if (TaskAssigner::inst->getCntrId(i) == TaskAssigner::inst->rank) {

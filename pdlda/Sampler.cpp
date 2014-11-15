@@ -41,7 +41,7 @@ REGISTER_ARG(betaArg)
 Sampler* Sampler::inst;
 
 static void updateCallBack(bool& arg0, void* buff, MPI_Status* status) {
-	delete (CntrServer_simp::updateInfo*) buff;
+	delete (CntrServer::updateInfo*) buff;
 }
 
 static void fetchSendCallBack(bool& arg0, void* buff, MPI_Status* status) {
@@ -124,13 +124,13 @@ void Sampler::initDocStates() {
 			topic_id u = randDist(BookLoader::inst->numU,
 					TVectorPool::inst->getTVec(z));
 			d.tokens[wordPos].u = u;
-			CntrServer_simp::updateInfo* buf = new CntrServer_simp::updateInfo;
+			CntrServer::updateInfo* buf = new CntrServer::updateInfo;
 			buf->w = d.tokens[wordPos].w;
 			buf->incU = u;
 			buf->decU = BookLoader::inst->numU;
 			MPI_Request* req = new MPI_Request;
 
-			MPI_Issend(buf, sizeof(CntrServer_simp::updateInfo), MPI_BYTE,
+			MPI_Issend(buf, sizeof(CntrServer::updateInfo), MPI_BYTE,
 					TaskAssigner::inst->getCntrId(buf->w), TAG_UPDATE,
 					MPI_COMM_WORLD, req);
 
@@ -255,12 +255,12 @@ void Sampler::sampleDocWord(doc_id docId, num wordPos, void* replyContent) {
 	d.distDocZ[tk->z]--;
 	d.distDocZ[nz]++;
 
-	CntrServer_simp::updateInfo* buf = new CntrServer_simp::updateInfo;
+	CntrServer::updateInfo* buf = new CntrServer::updateInfo;
 	buf->w = tk->w;
 	buf->incU = nu;
 	buf->decU = tk->u;
 	MPI_Request* req = new MPI_Request;
-	MPI_Issend(buf, sizeof(CntrServer_simp::updateInfo), MPI_BYTE,
+	MPI_Issend(buf, sizeof(CntrServer::updateInfo), MPI_BYTE,
 			TaskAssigner::inst->getCntrId(buf->w), TAG_UPDATE,
 			MPI_COMM_WORLD, req);
 	bool useless = true;
@@ -372,12 +372,12 @@ void Sampler::sampleDocWord_test(doc_id docId, num wordPos,
 	d.distDocZ[tk->z]--;
 	d.distDocZ[nz]++;
 
-//	CntrServer_simp::updateInfo* buf = new CntrServer_simp::updateInfo;
+//	CntrServer::updateInfo* buf = new CntrServer::updateInfo;
 //	buf->w = tk->w;
 //	buf->incU = nu;
 //	buf->decU = tk->u;
 //	MPI_Request* req = new MPI_Request;
-//	MPI_Issend(buf, sizeof(CntrServer_simp::updateInfo), MPI_BYTE,
+//	MPI_Issend(buf, sizeof(CntrServer::updateInfo), MPI_BYTE,
 //			TaskAssigner::inst->getCntrId(buf->w), TAG_UPDATE,
 //			MPI_COMM_WORLD, req);
 //	bool useless = true;
