@@ -41,7 +41,7 @@ REGISTER_ARG(betaArg)
 Sampler* Sampler::inst;
 
 static void updateCallBack(bool& arg0, void* buff, MPI_Status* status) {
-	delete (CntrServer::updateInfo*) buff;
+	delete (CntrServer_simp::updateInfo*) buff;
 }
 
 static void fetchSendCallBack(bool& arg0, void* buff, MPI_Status* status) {
@@ -87,7 +87,7 @@ static size_t randDist(size_t size, double* prob) {
 	double sum = 0;
 	for (size_t i = 0; i < size; i++) {
 		if (prob[i] < 0) {
-			throw new std::runtime_error("Prob smaller than 0!");
+			throw std::runtime_error("Prob smaller than 0!");
 		}
 		sum += prob[i];
 	}
@@ -98,7 +98,7 @@ static size_t randDist(size_t size, double* prob) {
 			return i;
 		}
 	}
-	throw new std::runtime_error("Sum >= 0 till the end!");
+	throw std::runtime_error("Sum >= 0 till the end!");
 }
 
 void Sampler::initDocStates() {
@@ -112,7 +112,7 @@ void Sampler::initDocStates() {
 		TVectorPool::inst->getZ4Doc(i, docZ);
 
 		if (docZ.size() == 0) {
-			throw new std::runtime_error("DocZ empty: NO z to choose!");
+			throw std::runtime_error("DocZ empty: NO z to choose!");
 		}
 
 		for (num wordPos = 0; wordPos < d.length; wordPos++) {
@@ -124,13 +124,13 @@ void Sampler::initDocStates() {
 			topic_id u = randDist(BookLoader::inst->numU,
 					TVectorPool::inst->getTVec(z));
 			d.tokens[wordPos].u = u;
-			CntrServer::updateInfo* buf = new CntrServer::updateInfo;
+			CntrServer_simp::updateInfo* buf = new CntrServer_simp::updateInfo;
 			buf->w = d.tokens[wordPos].w;
 			buf->incU = u;
 			buf->decU = BookLoader::inst->numU;
 			MPI_Request* req = new MPI_Request;
 
-			MPI_Issend(buf, sizeof(CntrServer::updateInfo), MPI_BYTE,
+			MPI_Issend(buf, sizeof(CntrServer_simp::updateInfo), MPI_BYTE,
 					TaskAssigner::inst->getCntrId(buf->w), TAG_UPDATE,
 					MPI_COMM_WORLD, req);
 
@@ -255,12 +255,12 @@ void Sampler::sampleDocWord(doc_id docId, num wordPos, void* replyContent) {
 	d.distDocZ[tk->z]--;
 	d.distDocZ[nz]++;
 
-	CntrServer::updateInfo* buf = new CntrServer::updateInfo;
+	CntrServer_simp::updateInfo* buf = new CntrServer_simp::updateInfo;
 	buf->w = tk->w;
 	buf->incU = nu;
 	buf->decU = tk->u;
 	MPI_Request* req = new MPI_Request;
-	MPI_Issend(buf, sizeof(CntrServer::updateInfo), MPI_BYTE,
+	MPI_Issend(buf, sizeof(CntrServer_simp::updateInfo), MPI_BYTE,
 			TaskAssigner::inst->getCntrId(buf->w), TAG_UPDATE,
 			MPI_COMM_WORLD, req);
 	bool useless = true;
@@ -372,12 +372,12 @@ void Sampler::sampleDocWord_test(doc_id docId, num wordPos,
 	d.distDocZ[tk->z]--;
 	d.distDocZ[nz]++;
 
-//	CntrServer::updateInfo* buf = new CntrServer::updateInfo;
+//	CntrServer_simp::updateInfo* buf = new CntrServer_simp::updateInfo;
 //	buf->w = tk->w;
 //	buf->incU = nu;
 //	buf->decU = tk->u;
 //	MPI_Request* req = new MPI_Request;
-//	MPI_Issend(buf, sizeof(CntrServer::updateInfo), MPI_BYTE,
+//	MPI_Issend(buf, sizeof(CntrServer_simp::updateInfo), MPI_BYTE,
 //			TaskAssigner::inst->getCntrId(buf->w), TAG_UPDATE,
 //			MPI_COMM_WORLD, req);
 //	bool useless = true;
@@ -516,27 +516,27 @@ void Sampler::judgeTest() {
 	num sum_sumWrLb = 0;
 
 	MPI_Allreduce(&all, &sum_all, 1, NUM_MPI_TYPE, MPI_SUM,
-			TaskAssigner::inst->sampComm);
+			MPI_COMM_WORLD);
 	MPI_Allreduce(&all_correct, &sum_all_correct, 1, NUM_MPI_TYPE, MPI_SUM,
-			TaskAssigner::inst->sampComm);
+			MPI_COMM_WORLD);
 
 	MPI_Allreduce(&first_k_percent, &sum_first_k_percent, 1, MPI_DOUBLE,
-	MPI_SUM, TaskAssigner::inst->sampComm);
+	MPI_SUM, MPI_COMM_WORLD);
 	MPI_Allreduce(&last_crLb_percent, &sum_last_crLb_percent, 1, MPI_DOUBLE,
-	MPI_SUM, TaskAssigner::inst->sampComm);
+	MPI_SUM, MPI_COMM_WORLD);
 	MPI_Allreduce(&first_crLb_1rank, &sum_first_crLb_1rank, 1, MPI_DOUBLE,
-	MPI_SUM, TaskAssigner::inst->sampComm);
+	MPI_SUM, MPI_COMM_WORLD);
 	MPI_Allreduce(&pair_percent, &sum_pair_percent, 1, MPI_DOUBLE, MPI_SUM,
-			TaskAssigner::inst->sampComm);
+			MPI_COMM_WORLD);
 
 	MPI_Allreduce(&lbCorrect, &sum_lbCorrect, 1, NUM_MPI_TYPE, MPI_SUM,
-			TaskAssigner::inst->sampComm);
+			MPI_COMM_WORLD);
 	MPI_Allreduce(&lbWrong, &sum_lbWrong, 1, NUM_MPI_TYPE, MPI_SUM,
-			TaskAssigner::inst->sampComm);
+			MPI_COMM_WORLD);
 	MPI_Allreduce(&sumCrLb, &sum_sumCrLb, 1, NUM_MPI_TYPE, MPI_SUM,
-			TaskAssigner::inst->sampComm);
+			MPI_COMM_WORLD);
 	MPI_Allreduce(&sumWrLb, &sum_sumWrLb, 1, NUM_MPI_TYPE, MPI_SUM,
-			TaskAssigner::inst->sampComm);
+			MPI_COMM_WORLD);
 
 	if (TaskAssigner::inst->rank == TaskAssigner::inst->lstSampIds[0]) {
 		std::stringstream tmp;

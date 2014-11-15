@@ -1,12 +1,12 @@
 /*
- * CntrServer.h
+ * CntrServer_simp.h
  *
  *  Created on: Jul 28, 2014
  *      Author: yw
  */
 
-#ifndef CNTRSERVER_H_
-#define CNTRSERVER_H_
+#ifndef CntrServer_simp_H_
+#define CntrServer_simp_H_
 
 #include "common.h"
 
@@ -15,7 +15,7 @@
 #define TAG_UPDATE 6
 
 namespace pdlda {
-class CntrServer {
+class CntrServer_simp {
 public:
 	typedef struct {
 		word_id w;
@@ -23,9 +23,9 @@ public:
 		topic_id incU;
 	} updateInfo;
 
-	static CntrServer* inst;
-	CntrServer();
-	~CntrServer();
+	static CntrServer_simp* inst;
+	CntrServer_simp();
+	~CntrServer_simp();
 
 	num** wordUDist;
 	num opNum_l;
@@ -41,4 +41,4 @@ private:
 };
 }
 
-#endif /* CNTRSERVER_H_ */
+#endif /* CntrServer_simp_H_ */

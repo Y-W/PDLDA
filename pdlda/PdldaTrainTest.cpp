@@ -122,7 +122,6 @@ int main(int argc, char **argv) {
 		}
 		if (TaskAssigner::inst->isSamp) {
 			TVectorPool::inst->updateTVec();
-
 			if (TaskAssigner::inst->rank == TaskAssigner::inst->lstSampIds[0]) {
 				ss << getCurrentTimeString() << " @ "
 						<< (int) TaskAssigner::inst->rank << " - Output T matrix:\n";

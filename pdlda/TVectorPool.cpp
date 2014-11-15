@@ -163,7 +163,6 @@ void TVectorPool::updateTVec() {
 	for (size_t i = 0; i < (size_t) numZ * BookLoader::inst->numU; i++) {
 		tVecs[i] = tmpSum[i];
 	}
-
 	if (klsIter == 0) {
 
 		for (topic_id i = 0; i < numBgZ; i++) {
