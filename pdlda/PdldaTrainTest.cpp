@@ -37,6 +37,10 @@ static TCLAP::ValueArg<num> gibbs_iterArg_test("G", "gibbs_iter_test",
 		"Number of Gibbs iterations for testing", true, 0, "integer");
 REGISTER_ARG(gibbs_iterArg_test)
 
+static TCLAP::ValueArg<num> averaged_iterArg_test("A", "averaged_iter_test",
+		"Number of last Gibbs iterations to average for testing", true, 0, "integer");
+REGISTER_ARG(averaged_iterArg_test)
+
 static TCLAP::ValueArg<num> em_iterArg_test("E", "em_iter_test",
 		"Frequency of testing by number of EM iterations", true, 0, "integer");
 REGISTER_ARG(em_iterArg_test)
@@ -64,6 +68,7 @@ int main(int argc, char **argv) {
 	num gibbs_iter = gibbs_iterArg.getValue();
 	num smooth_iter = smooth_iterArg.getValue();
 	num gibbs_iter_test = gibbs_iterArg_test.getValue();
+	num averaged_iter_test = averaged_iterArg_test.getValue();
 	num em_iter_test = em_iterArg_test.getValue();
 
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -151,8 +156,12 @@ int main(int argc, char **argv) {
 
 			if (TaskAssigner::inst->isSamp) {
 				Sampler::inst->initDocStates_test();
+				Sampler::inst->clearDocLabelCnt();
 				for (num gbs = 0; gbs < gibbs_iter_test; gbs++) {
 					Sampler::inst->sampleAllDocOnce_test();
+					if(gbs + averaged_iter_test >= gibbs_iter_test) {
+						Sampler::inst->accumDocLabelCnt();
+					}
 				}
 				Sampler::inst->judgeTest();
 			} else {

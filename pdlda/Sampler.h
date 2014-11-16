@@ -39,6 +39,11 @@ public:
 	void sampleAllDocOnce_test();
 	void sampleDocWord_test(doc_id docId, num wordPos, void* replyContent);
 
+	num* docTopic;
+
+	void clearDocLabelCnt();
+	void accumDocLabelCnt();
+
 	void judgeTest();
 
 private:
