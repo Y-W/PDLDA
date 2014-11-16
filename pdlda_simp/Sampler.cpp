@@ -40,10 +40,16 @@ REGISTER_ARG(betaArg)
 
 Sampler* Sampler::inst;
 
-
-Sampler::Sampler(){
+Sampler::Sampler() {
 	alpha = alphaArg.getValue();
 	beta = betaArg.getValue();
+
+	docTopic = new num[(size_t) BookLoader::inst->numDoc
+			* BookLoader::inst->numLabel];
+	memset(docTopic, 0,
+			(size_t) BookLoader::inst->numDoc * BookLoader::inst->numLabel
+					* sizeof(num));
+
 	Sampler::inst = this;
 }
 
@@ -54,7 +60,7 @@ static size_t randDist(size_t size, double* prob) {
 	double sum = 0;
 	for (size_t i = 0; i < size; i++) {
 		if (prob[i] < 0) {
-			throw new std::runtime_error("Prob smaller than 0!");
+			throw std::runtime_error("Prob smaller than 0!");
 		}
 		sum += prob[i];
 	}
@@ -65,7 +71,7 @@ static size_t randDist(size_t size, double* prob) {
 			return i;
 		}
 	}
-	throw new std::runtime_error("Sum >= 0 till the end!");
+	throw std::runtime_error("Sum >= 0 till the end!");
 }
 
 void Sampler::initDocStates() {
@@ -79,7 +85,7 @@ void Sampler::initDocStates() {
 		TVectorPool::inst->getZ4Doc(i, docZ);
 
 		if (docZ.size() == 0) {
-			throw new std::runtime_error("DocZ empty: NO z to choose!");
+			throw std::runtime_error("DocZ empty: NO z to choose!");
 		}
 
 		for (num wordPos = 0; wordPos < d.length; wordPos++) {
@@ -104,7 +110,8 @@ void Sampler::sampleAllDocOnce() {
 
 		DocState::doc& d = DocState::inst->getDocState(i);
 		for (num wordPos = 0; wordPos < d.length; wordPos++) {
-			sampleDocWord(i, wordPos, CntrServer_simp::inst->fetch(d.tokens[wordPos].w));
+			sampleDocWord(i, wordPos,
+					CntrServer_simp::inst->fetch(d.tokens[wordPos].w));
 		}
 	}
 }
@@ -186,7 +193,8 @@ void Sampler::sampleAllDocOnce_test() {
 
 		DocState::doc& d = DocState::inst->getDocState_test(i);
 		for (num wordPos = 0; wordPos < d.length; wordPos++) {
-			sampleDocWord_test(i, wordPos, CntrServer_simp::inst->fetch(d.tokens[wordPos].w));
+			sampleDocWord_test(i, wordPos,
+					CntrServer_simp::inst->fetch(d.tokens[wordPos].w));
 		}
 	}
 }
@@ -235,6 +243,37 @@ static bool cmpResult(std::pair<label_id, num> a, std::pair<label_id, num> b) {
 	return (a.second > b.second);
 }
 
+void Sampler::clearDocLabelCnt() {
+	memset(docTopic, 0,
+			(size_t) BookLoader::inst->numDoc * BookLoader::inst->numLabel
+					* sizeof(num));
+}
+
+void Sampler::accumDocLabelCnt() {
+
+	for (doc_id i = 0; i < BookLoader::inst->numDoc_test; i++) {
+
+		if (TaskAssigner::inst->getSampId(i) != TaskAssigner::inst->rank) {
+			continue;
+		}
+
+		num* p = docTopic + BookLoader::inst->numLabel * (size_t) i;
+		DocState::doc& d = DocState::inst->getDocState_test(i);
+
+		for (label_id l = 0; l < BookLoader::inst->numLabel; l++) {
+			vector<topic_id> docZ;
+			TVectorPool::inst->getZ4Lb_test(l, docZ);
+			num cnt = 0;
+			for (size_t pos = 0; pos < docZ.size(); pos++) {
+				topic_id z = docZ[pos];
+				cnt += d.distDocZ[z];
+			}
+
+			*(p+l) += cnt;
+		}
+	}
+}
+
 void Sampler::judgeTest() {
 	num all = 0;
 	num all_correct = 0;
@@ -253,24 +292,16 @@ void Sampler::judgeTest() {
 			continue;
 		}
 
+		num* p = docTopic + BookLoader::inst->numLabel * (size_t) i;
 		std::vector<std::pair<label_id, num> > results;
-		DocState::doc& d = DocState::inst->getDocState_test(i);
 		for (label_id l = 0; l < BookLoader::inst->numLabel; l++) {
-			vector<topic_id> docZ;
-			TVectorPool::inst->getZ4Lb_test(l, docZ);
-			num cnt = 0;
-			for (size_t pos = 0; pos < docZ.size(); pos++) {
-				topic_id z = docZ[pos];
-				cnt += d.distDocZ[z];
-			}
-
-			results.push_back(std::pair<label_id, num>(l, cnt));
+			results.push_back(std::pair<label_id, num>(l, *(p+l)));
 
 			if (BookLoader::inst->documents_test[i].labels.count(l) > 0) {
-				sumCrLb += cnt;
+				sumCrLb += *(p+l);
 				lbCorrect++;
 			} else {
-				sumWrLb += cnt;
+				sumWrLb += *(p+l);
 				lbWrong++;
 			}
 		}
@@ -306,7 +337,8 @@ void Sampler::judgeTest() {
 			}
 		}
 
-		last_crLb_percent += (lstPos + 1 - numCrLb) * 1.0 / (BookLoader::inst->numLabel - numCrLb);
+		last_crLb_percent += (lstPos + 1 - numCrLb) * 1.0
+				/ (BookLoader::inst->numLabel - numCrLb);
 		first_crLb_1rank += 1.0 / (fstPos + 1.0);
 
 		num cntCrPr = 0;
@@ -358,9 +390,9 @@ void Sampler::judgeTest() {
 	num sum_sumWrLb = 0;
 
 	MPI_Allreduce(&all, &sum_all, 1, NUM_MPI_TYPE, MPI_SUM,
-			MPI_COMM_WORLD);
+	MPI_COMM_WORLD);
 	MPI_Allreduce(&all_correct, &sum_all_correct, 1, NUM_MPI_TYPE, MPI_SUM,
-			MPI_COMM_WORLD);
+	MPI_COMM_WORLD);
 
 	MPI_Allreduce(&first_k_percent, &sum_first_k_percent, 1, MPI_DOUBLE,
 	MPI_SUM, MPI_COMM_WORLD);
@@ -369,16 +401,16 @@ void Sampler::judgeTest() {
 	MPI_Allreduce(&first_crLb_1rank, &sum_first_crLb_1rank, 1, MPI_DOUBLE,
 	MPI_SUM, MPI_COMM_WORLD);
 	MPI_Allreduce(&pair_percent, &sum_pair_percent, 1, MPI_DOUBLE, MPI_SUM,
-			MPI_COMM_WORLD);
+	MPI_COMM_WORLD);
 
 	MPI_Allreduce(&lbCorrect, &sum_lbCorrect, 1, NUM_MPI_TYPE, MPI_SUM,
-			MPI_COMM_WORLD);
+	MPI_COMM_WORLD);
 	MPI_Allreduce(&lbWrong, &sum_lbWrong, 1, NUM_MPI_TYPE, MPI_SUM,
-			MPI_COMM_WORLD);
+	MPI_COMM_WORLD);
 	MPI_Allreduce(&sumCrLb, &sum_sumCrLb, 1, NUM_MPI_TYPE, MPI_SUM,
-			MPI_COMM_WORLD);
+	MPI_COMM_WORLD);
 	MPI_Allreduce(&sumWrLb, &sum_sumWrLb, 1, NUM_MPI_TYPE, MPI_SUM,
-			MPI_COMM_WORLD);
+	MPI_COMM_WORLD);
 
 	if (TaskAssigner::inst->rank == 0) {
 		std::stringstream tmp;

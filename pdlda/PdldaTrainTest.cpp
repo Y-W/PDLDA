@@ -30,7 +30,8 @@ static TCLAP::ValueArg<num> gibbs_iterArg("g", "gibbs_iter",
 REGISTER_ARG(gibbs_iterArg)
 
 static TCLAP::ValueArg<num> smooth_iterArg("S", "smooth_iter",
-		"Number of Gibbs iterations to use for smoothing EM update", true, 0, "integer");
+		"Number of Gibbs iterations to use for smoothing EM update", true, 0,
+		"integer");
 REGISTER_ARG(smooth_iterArg)
 
 static TCLAP::ValueArg<num> gibbs_iterArg_test("G", "gibbs_iter_test",
@@ -38,7 +39,8 @@ static TCLAP::ValueArg<num> gibbs_iterArg_test("G", "gibbs_iter_test",
 REGISTER_ARG(gibbs_iterArg_test)
 
 static TCLAP::ValueArg<num> averaged_iterArg_test("A", "averaged_iter_test",
-		"Number of last Gibbs iterations to average for testing", true, 0, "integer");
+		"Number of last Gibbs iterations to average for testing", true, 0,
+		"integer");
 REGISTER_ARG(averaged_iterArg_test)
 
 static TCLAP::ValueArg<num> em_iterArg_test("E", "em_iter_test",
@@ -85,16 +87,12 @@ int main(int argc, char **argv) {
 	ss.str("");
 	MPI_Barrier(MPI_COMM_WORLD);
 	for (size_t em = 0; em < em_iter; em++) {
-//		ss << getCurrentTimeString() << " @ " << TaskAssigner::inst->rank
-//				<< " - Started EM Iter " << em << ".\n";
-//		std::cout << ss.str();
-//		ss.str("");
+		ss << getCurrentTimeString() << " @ " << TaskAssigner::inst->rank
+				<< " - Started EM Iter " << em << ".\n";
+		std::cout << ss.str();
+		ss.str("");
 		TVectorPool::inst->clearDocStateCache();
 		for (size_t gibbs = 0; gibbs < gibbs_iter; gibbs++) {
-//			ss << getCurrentTimeString() << " @ " << TaskAssigner::inst->rank
-//					<< " - Started Gibbs Iter " << gibbs << ".\n";
-//			std::cout << ss.str();
-//			ss.str("");
 
 			if (TaskAssigner::inst->isSamp) {
 				Sampler::inst->updateDistUCache();
@@ -103,9 +101,7 @@ int main(int argc, char **argv) {
 
 				Sampler::inst->sampleAllDocOnce();
 
-				MPI_Barrier(MPI_COMM_WORLD);
-
-				if(gibbs + smooth_iter >= gibbs_iter) {
+				if (gibbs + smooth_iter >= gibbs_iter) {
 					TVectorPool::inst->cacheCurrentDocState4Update();
 				}
 			} else {
@@ -115,11 +111,10 @@ int main(int argc, char **argv) {
 				CntrServer::inst->listen(CntrServer::inst->opNum_l,
 						CntrServer::inst->opNum_l);
 
-				MPI_Barrier(MPI_COMM_WORLD);
-
 			}
 			MPI_Barrier(MPI_COMM_WORLD);
-			ss << getCurrentTimeString() << " @ " << (int) TaskAssigner::inst->rank
+			ss << getCurrentTimeString() << " @ "
+					<< (int) TaskAssigner::inst->rank
 					<< " - Finished Gibbs Iter " << gibbs << ".\n";
 			std::cout << ss.str();
 			ss.str("");
@@ -127,20 +122,27 @@ int main(int argc, char **argv) {
 		}
 		if (TaskAssigner::inst->isSamp) {
 			TVectorPool::inst->updateTVec();
+
+#ifndef PDLDATRAINTEST_IGNORE_V_PRINTOUT
 			if (TaskAssigner::inst->rank == TaskAssigner::inst->lstSampIds[0]) {
 				ss << getCurrentTimeString() << " @ "
-						<< (int) TaskAssigner::inst->rank << " - Output T matrix:\n";
+						<< (int) TaskAssigner::inst->rank
+						<< " - Output T matrix:\n";
 
-				for(topic_id z=0; z<TVectorPool::inst->numZ; z++) {
-					for(topic_id u=0; u<BookLoader::inst->numU; u++) {
-						ss<<TVectorPool::inst->tVecs[z*BookLoader::inst->numU+u]<<' ';
+				for (topic_id z = 0; z < TVectorPool::inst->numZ; z++) {
+					for (topic_id u = 0; u < BookLoader::inst->numU; u++) {
+						ss
+								<< TVectorPool::inst->tVecs[z
+										* BookLoader::inst->numU + u] << ' ';
 					}
-					ss<<"\n";
+					ss << "\n";
 				}
 
 				std::cout << ss.str();
 				ss.str("");
 			}
+#endif
+
 		}
 		MPI_Barrier(MPI_COMM_WORLD);
 		ss << getCurrentTimeString() << " @ " << (int) TaskAssigner::inst->rank
@@ -149,37 +151,43 @@ int main(int argc, char **argv) {
 		ss.str("");
 
 		if ((em + 1) % em_iter_test == 0) {
-			ss << getCurrentTimeString() << " @ " << (int) TaskAssigner::inst->rank
-					<< " - Start Testing.\n";
+			ss << getCurrentTimeString() << " @ "
+					<< (int) TaskAssigner::inst->rank << " - Start Testing.\n";
 			std::cout << ss.str();
 			ss.str("");
 
 			if (TaskAssigner::inst->isSamp) {
 				Sampler::inst->initDocStates_test();
-				printf("@1,%d", TaskAssigner::inst->rank);
 				Sampler::inst->clearDocLabelCnt();
-				printf("@2,%d", TaskAssigner::inst->rank);
 				for (num gbs = 0; gbs < gibbs_iter_test; gbs++) {
-					printf("@3,%d", TaskAssigner::inst->rank);
 					Sampler::inst->sampleAllDocOnce_test();
-					printf("@4,%d", TaskAssigner::inst->rank);
-					if(gbs + averaged_iter_test >= gibbs_iter_test) {
+					if (gbs + averaged_iter_test >= gibbs_iter_test) {
 						Sampler::inst->accumDocLabelCnt();
+						ss << getCurrentTimeString() << " @ "
+								<< (int) TaskAssigner::inst->rank
+								<< " - Finished testing gibbs sampling iter "
+								<< gbs << " - averaged.\n";
+						std::cout << ss.str();
+						ss.str("");
+					} else {
+						ss << getCurrentTimeString() << " @ "
+								<< (int) TaskAssigner::inst->rank
+								<< " - Finished testing gibbs sampling iter "
+								<< gbs << " - not averaged.\n";
+						std::cout << ss.str();
+						ss.str("");
 					}
-					printf("@5,%d", TaskAssigner::inst->rank);
 				}
-				printf("@6,%d", TaskAssigner::inst->rank);
 				Sampler::inst->judgeTest();
-				printf("@7,%d", TaskAssigner::inst->rank);
 			} else {
 				CntrServer::inst->listen(
 						CntrServer::inst->opNum_l_test * gibbs_iter_test, 0);
 			}
 
-//			ss << getCurrentTimeString() << " @ " << TaskAssigner::inst->rank
-//					<< " - Finished Testing.\n";
-//			std::cout << ss.str();
-//			ss.str("");
+			ss << getCurrentTimeString() << " @ " << TaskAssigner::inst->rank
+					<< " - Finished Testing.\n";
+			std::cout << ss.str();
+			ss.str("");
 		}
 
 		MPI_Barrier(MPI_COMM_WORLD);
