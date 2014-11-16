@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
 	ss.str("");
 	MPI_Barrier(MPI_COMM_WORLD);
 	for (size_t em = 0; em < em_iter; em++) {
-		ss << getCurrentTimeString() << " @ " << TaskAssigner::inst->rank
+		ss << getCurrentTimeString() << " @ " << (int) TaskAssigner::inst->rank
 				<< " - Started EM Iter " << em << ".\n";
 		std::cout << ss.str();
 		ss.str("");
@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
 						CntrServer::inst->opNum_l_test * gibbs_iter_test, 0);
 			}
 
-			ss << getCurrentTimeString() << " @ " << TaskAssigner::inst->rank
+			ss << getCurrentTimeString() << " @ " << (int) TaskAssigner::inst->rank
 					<< " - Finished Testing.\n";
 			std::cout << ss.str();
 			ss.str("");

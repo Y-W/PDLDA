@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
 	ss.str("");
 
 	for (size_t em = 0; em < em_iter; em++) {
-		ss << getCurrentTimeString() << " @ " << TaskAssigner::inst->rank
+		ss << getCurrentTimeString() << " @ " << (int) TaskAssigner::inst->rank
 				<< " - Started EM Iter " << em << ".\n";
 		std::cout << ss.str();
 		ss.str("");
@@ -163,7 +163,7 @@ int main(int argc, char **argv) {
 			}
 			Sampler::inst->judgeTest();
 
-			ss << getCurrentTimeString() << " @ " << TaskAssigner::inst->rank
+			ss << getCurrentTimeString() << " @ " << (int) TaskAssigner::inst->rank
 					<< " - Finished Testing.\n";
 			std::cout << ss.str();
 			ss.str("");
