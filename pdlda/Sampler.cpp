@@ -423,7 +423,7 @@ void Sampler::accumDocLabelCnt() {
 				cnt += d.distDocZ[z];
 			}
 
-			*(p+l) = cnt;
+			*(p+l) += cnt;
 		}
 	}
 }

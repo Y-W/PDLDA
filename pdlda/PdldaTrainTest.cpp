@@ -156,14 +156,21 @@ int main(int argc, char **argv) {
 
 			if (TaskAssigner::inst->isSamp) {
 				Sampler::inst->initDocStates_test();
+				printf("@1,%d", TaskAssigner::inst->rank);
 				Sampler::inst->clearDocLabelCnt();
+				printf("@2,%d", TaskAssigner::inst->rank);
 				for (num gbs = 0; gbs < gibbs_iter_test; gbs++) {
+					printf("@3,%d", TaskAssigner::inst->rank);
 					Sampler::inst->sampleAllDocOnce_test();
+					printf("@4,%d", TaskAssigner::inst->rank);
 					if(gbs + averaged_iter_test >= gibbs_iter_test) {
 						Sampler::inst->accumDocLabelCnt();
 					}
+					printf("@5,%d", TaskAssigner::inst->rank);
 				}
+				printf("@6,%d", TaskAssigner::inst->rank);
 				Sampler::inst->judgeTest();
+				printf("@7,%d", TaskAssigner::inst->rank);
 			} else {
 				CntrServer::inst->listen(
 						CntrServer::inst->opNum_l_test * gibbs_iter_test, 0);
