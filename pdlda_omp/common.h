@@ -9,7 +9,7 @@
 
 namespace pdlda {
 
-typedef uint8_t topic_id;
+typedef uint16_t topic_id;
 typedef uint32_t word_id;
 typedef uint8_t label_id;
 typedef uint16_t doc_id;

@@ -8,4 +8,7 @@
 #define RND_ST_INC1 6037
 #define RND_ST_INC2 757
 
+#define VERBOSE_EM
+#define VERBOSE_GIBBS
+
 #endif

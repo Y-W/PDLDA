@@ -10,6 +10,7 @@
 
 #include <string>
 #include <map>
+#include <sstream>
 #include "common.h"
 #include "param.h"
 
@@ -58,6 +59,26 @@ public:
 	static void initTmx();
 	static void init();
 	static void destroy();
+
+	template<typename T>
+	static std::string get1dArrayStr(size_t s, T* arr){
+		std::stringstream tmp;
+		for (size_t i = 0; i < s - 1; i++) {
+			tmp << arr[i] << ", ";
+		}
+		tmp << arr[s - 1];
+		return tmp.str();
+	}
+
+	template<typename T>
+	static std::string get2dArrayStr(size_t r, size_t c, T* arr){
+		std::stringstream tmp;
+		for (size_t i = 0; i < r; i++) {
+			tmp << get1dArrayStr(c, arr+i*c) << std::endl;
+		}
+		return tmp.str();
+	}
+
 };
 
 } /* namespace pdlda */

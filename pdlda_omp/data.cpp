@@ -261,7 +261,7 @@ void Data::initTmx() {
 
 void Data::initRnd() {
 	rnd = new uint32_t[RND_LENGTH];
-	MTRand mtRand(Param::rndSeed);
+	MTRand_int32 mtRand(Param::rndSeed);
 	for (std::size_t i = 0; i < RND_LENGTH; i++) {
 		rnd[i] = mtRand();
 	}

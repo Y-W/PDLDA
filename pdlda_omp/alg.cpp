@@ -63,7 +63,7 @@ static inline label_id cntNumLabel(label_set v) {
 }
 
 static inline topic_id cntZNum(label_set v) {
-	return Param::numBgZ + cntNumLabel(v) * Param::numLbZ;
+	return Param::numBgZ + cntNumLabel(v) * (topic_id) Param::numLbZ;
 }
 
 //static inline topic_id getIthZ(label_set v, topic_id i) {
@@ -310,6 +310,7 @@ void Alg::accumZUCnt() {
 static void normalizeVector(double* arr, size_t size) {
 	double sum = 0;
 	for (size_t i = 0; i < size; i++) {
+		arr[i] = (arr[i] < 0 ? 0 : arr[i]);
 		sum += arr[i];
 	}
 	sum = 1.0 / sum;
@@ -556,6 +557,10 @@ void Alg::judgeTest(num trainIterNum) {
 void Alg::trainEmItr() {
 	clearZUCnt();
 	for (int i = 0; i < Param::trainGibbsIter; i++) {
+#ifdef VERBOSE_GIBBS
+		std::cout << getCurrentTimeString() << " Start Gibbs training #"
+				<< (i + 1) << std::endl;
+#endif
 		trainGibbsSamp();
 		if (i + Param::trainGibbsAccum >= Param::trainGibbsIter) {
 			accumZUCnt();
@@ -568,6 +573,10 @@ void Alg::testItr(num trainIterNum) {
 	testStateInit();
 	clearTestLabelCnt();
 	for (int i = 0; i < Param::testGibbsIter; i++) {
+#ifdef VERBOSE_GIBBS
+		std::cout << getCurrentTimeString() << " Start Gibbs testing #"
+				<< (i + 1) << std::endl;
+#endif
 		testGibbsSamp();
 		if (i + Param::testGibbsAccum >= Param::testGibbsIter) {
 			accumTestLabelCnt();
@@ -579,9 +588,17 @@ void Alg::testItr(num trainIterNum) {
 void Alg::testWhileTrain() {
 	trainStateInit();
 	for (int i = 0; i < Param::trainEmIter; i++) {
+#ifdef VERBOSE_EM
+		std::cout << getCurrentTimeString() << " Start EM training #"
+				<< (i + 1) << std::endl;
+#endif
 		trainEmItr();
-		if((i+1) % Param::testEmFreq == 0) {
-			testItr(i+1);
+		if ((i + 1) % Param::testEmFreq == 0) {
+#ifdef VERBOSE_EM
+			std::cout << getCurrentTimeString() << " Starting testing #"
+					<< (i + 1) << std::endl;
+#endif
+			testItr(i + 1);
 		}
 	}
 }
