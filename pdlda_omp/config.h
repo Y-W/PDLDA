@@ -9,6 +9,6 @@
 #define RND_ST_INC2 757
 
 #define VERBOSE_EM
-#define VERBOSE_GIBBS
+//#define VERBOSE_GIBBS
 
 #endif

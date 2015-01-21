@@ -180,14 +180,19 @@ void Alg::trainGibbsSamp() {
 	for (doc_id d = 0; d < Param::numTrainDoc; d++) {
 		size_t rndPos = (Data::rndStPos + d * (size_t) RND_ST_INC2) % RND_LENGTH;
 		Data::doc_state& ds = Data::trainDocStates[d];
+
+		topic_id numAvailZ = cntZNum(ds.labels);
+		topic_id* availZ = new topic_id[numAvailZ];
+		listZ(ds.labels, availZ);
+
 		double* aU = new double[Param::numU];
-		size_t distLen = (Param::numU > Param::numZ ? Param::numU : Param::numZ);
+		size_t distLen = (Param::numU > numAvailZ ? Param::numU : numAvailZ);
 		double* dist = new double[distLen];
 		double betaNumW = Param::beta * Param::numWord;
 		for (size_t u = 0; u < Param::numU; u++) {
 			aU[u] = 0;
-			for (size_t z = 0; z < Param::numZ; z++) {
-				aU[u] += (Data::getTmxRow(z)[u]) * (Param::alpha + ds.cntZ[z]);
+			for (size_t zi = 0; zi < numAvailZ; zi++) {
+				aU[u] += (Data::getTmxRow(availZ[zi])[u]) * (Param::alpha + ds.cntZ[availZ[zi]]);
 			}
 		}
 		for (size_t p = 0; p < ds.length; p++) {
@@ -205,16 +210,16 @@ void Alg::trainGibbsSamp() {
 			}
 			topic_id newU = sampDist(Param::numU, dist, Data::rnd[rndPos]);
 			INC_RND_ST_POS(rndPos);
-			for (size_t z = 0; z < Param::numZ; z++) {
-				if (cpy.z == z) {
-					dist[z] = (ds.cntZ[z] - 1 + Param::alpha)
-							* Data::getTmxRow(z)[newU];
+			for (size_t zi = 0; zi < numAvailZ; zi++) {
+				if (cpy.z == availZ[zi]) {
+					dist[zi] = (ds.cntZ[availZ[zi]] - 1 + Param::alpha)
+							* Data::getTmxRow(availZ[zi])[newU];
 				} else {
-					dist[z] = (ds.cntZ[z] + Param::alpha)
-							* Data::getTmxRow(z)[newU];
+					dist[zi] = (ds.cntZ[availZ[zi]] + Param::alpha)
+							* Data::getTmxRow(availZ[zi])[newU];
 				}
 			}
-			topic_id newZ = sampDist(Param::numZ, dist, Data::rnd[rndPos]);
+			topic_id newZ = availZ[sampDist(numAvailZ, dist, Data::rnd[rndPos])];
 			INC_RND_ST_POS(rndPos);
 			ds.tokens[p].z = newZ;
 			ds.tokens[p].u = newU;
@@ -236,6 +241,7 @@ void Alg::trainGibbsSamp() {
 
 		delete[] aU;
 		delete[] dist;
+		delete[] availZ;
 	}
 
 	Data::rndStPos = (Data::rndStPos + RND_ST_INC1) % RND_LENGTH;
@@ -419,7 +425,6 @@ void Alg::accumTestLabelCnt() {
 	for (size_t i = 0; i < Param::numTestDoc; i++) {
 		for (size_t j = 0; j < Param::numLabel; j++) {
 			for (size_t k = 0; k < Param::numLbZ; k++) {
-#pragma omp atomic
 				Data::testLabelDistAccum[i * (size_t) Param::numLabel + j] +=
 						Data::testDocStates[i].cntZ[Param::numBgZ
 								+ j * Param::numLbZ + k];
@@ -589,8 +594,8 @@ void Alg::testWhileTrain() {
 	trainStateInit();
 	for (int i = 0; i < Param::trainEmIter; i++) {
 #ifdef VERBOSE_EM
-		std::cout << getCurrentTimeString() << " Start EM training #"
-				<< (i + 1) << std::endl;
+		std::cout << getCurrentTimeString() << " Start EM training #" << (i + 1)
+				<< std::endl;
 #endif
 		trainEmItr();
 		if ((i + 1) % Param::testEmFreq == 0) {

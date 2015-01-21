@@ -27,6 +27,8 @@ int main(int argc, char **argv) {
 
 	Alg::testWhileTrain();
 
+	std::cout << Data::get2dArrayStr(Param::numZ, Param::numU, Data::tmx);
+
 	destroy();
 }
 
