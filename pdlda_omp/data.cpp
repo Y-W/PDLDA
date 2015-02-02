@@ -23,6 +23,7 @@ using std::vector;
 
 Data::doc_state* Data::trainDocStates;
 Data::doc_state* Data::testDocStates;
+Data::doc_state* Data::unlabelledDocStates;
 double* Data::tmx;
 num* Data::cntWU;
 num* Data::cntU;
@@ -241,6 +242,101 @@ void Data::loadTestData() {
 	}
 }
 
+void Data::loadUnlabelledData() {
+	unlabelledDocStates = NULL;
+	Param::numUnlabelledDoc = 0;
+	if(!Param::unlabelledPath.empty()) {
+		std::ifstream bookFile_unlabelled(Param::unlabelledPath.c_str());
+		string line;
+		vector<Doc> tmpDocs;
+		num totalTokens = 0;
+
+		while (std::getline(bookFile_unlabelled, line)) {
+			if (line[0] == '#')
+				continue;
+			Doc doc;
+
+			string labelS;
+			if (line.find(':') == string::npos) {
+				labelS = line.substr(0, line.find_first_of(' '));
+				line = line.substr(line.find_first_of(' ') + 1);
+			} else {
+				labelS = line.substr(0, line.find_first_of(':'));
+				line = line.substr(line.find_first_of(':') + 1);
+			}
+			std::istringstream labelStream(labelS);
+			string labelStr;
+			while (labelStream >> labelStr) {
+				if (labelStrMap.count(labelStr) > 0) {
+					doc.labels.insert(labelStrMap.find(labelStr)->second);
+				} else {
+					// ignore
+				}
+			}
+
+			string wordStr;
+			std::istringstream wordStream(line);
+			word_id lastId;
+			bool lastValid = false;
+			while (wordStream >> wordStr) {
+				num n = atol(wordStr.c_str());
+				if (n > 0) {
+					if (!lastValid) {
+						throw std::runtime_error(
+								"Parsing book file failed: two numbers in a row!");
+					}
+					lastValid = false;
+					if (lastId < WORD_ID_MAX) {
+						for (num i = 0; i < n - 1; i++) { // n-1 not n!!
+							doc.words.push_back(lastId);
+						}
+					}
+				} else {
+					lastValid = true;
+					if (wordStrMap.count(wordStr) > 0) {
+						lastId = wordStrMap.find(wordStr)->second;
+						doc.words.push_back(lastId);
+					} else {
+						lastId = WORD_ID_MAX;
+						// ignore
+					}
+				}
+			}
+
+	#ifdef DATALOADER_SHUFFLE_WORD_ORDER
+			std::random_shuffle(doc.words.begin(), doc.words.end(), tmpRandFn);
+	#endif
+
+			std::vector<word_id>(doc.words).swap(doc.words); // to shrink the capacity of words
+
+			totalTokens += doc.words.size();
+			tmpDocs.push_back(doc);
+
+		}
+
+		bookFile_unlabelled.close();
+
+		Param::numUnlabelledDoc = tmpDocs.size();
+
+		zuw* tokenSpace = new zuw[totalTokens];
+		num* cntZSpace = new num[Param::numZ * (std::size_t) Param::numUnlabelledDoc];
+		unlabelledDocStates = new doc_state[Param::numUnlabelledDoc];
+
+		for (std::size_t i = 0; i < Param::numUnlabelledDoc; i++) {
+			unlabelledDocStates[i].length = tmpDocs[i].words.size();
+			unlabelledDocStates[i].labels = 0;
+			unlabelledDocStates[i].tokens = tokenSpace;
+			tokenSpace += unlabelledDocStates[i].length;
+			unlabelledDocStates[i].cntZ = cntZSpace;
+			cntZSpace += Param::numZ;
+	#pragma omp parallel for
+			for (std::size_t j = 0; j < unlabelledDocStates[i].length; j++) {
+				unlabelledDocStates[i].tokens[j].w = tmpDocs[i].words[j];
+			}
+		}
+	}
+}
+
 void Data::initCounts() {
 	cntWU = new num[Param::numWord * (std::size_t) Param::numU];
 	cntU = new num[Param::numU];
@@ -270,6 +366,7 @@ void Data::initRnd() {
 void Data::init() {
 	Data::initRnd();
 	Data::loadTrainData();
+	Data::loadUnlabelledData();
 	Data::loadTestData();
 	Data::initCounts();
 	Data::initTmx();
@@ -289,4 +386,9 @@ void Data::destroy() {
 	delete[] testDocStates[0].tokens;
 	delete[] testDocStates[0].cntZ;
 	delete[] testDocStates;
+	if (unlabelledDocStates != NULL) {
+		delete[] unlabelledDocStates[0].tokens;
+		delete[] unlabelledDocStates[0].cntZ;
+		delete[] unlabelledDocStates;
+	}
 }

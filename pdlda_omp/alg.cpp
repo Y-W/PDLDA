@@ -146,6 +146,50 @@ void Alg::trainStateInit() {
 		Data::cntU[u] = sum;
 	}
 }
+
+#define ALL_LABELS ((label_set)((1 << Param::numLabel) - 1))
+
+void Alg::unlabelledStateInit() {
+	if(Data::unlabelledDocStates == NULL) return;
+
+#pragma omp parallel for schedule(dynamic)
+	for (doc_id i = 0; i < Param::numUnlabelledDoc; i++) {
+		size_t rndPos = (Data::rndStPos + i * (size_t) RND_ST_INC2) % RND_LENGTH;
+		Data::doc_state& ds = Data::unlabelledDocStates[i];
+		for (size_t j = 0; j < Param::numZ; j++) {
+			ds.cntZ[j] = 0;
+		}
+		topic_id numAvailZ = cntZNum(ALL_LABELS);
+		topic_id* availZ = new topic_id[numAvailZ];
+		listZ(ALL_LABELS, availZ);
+
+		for (size_t j = 0; j < ds.length; j++) {
+			Data::zuw& tkn = ds.tokens[j];
+			tkn.z = availZ[Data::rnd[rndPos] % numAvailZ];
+			INC_RND_ST_POS(rndPos);
+			tkn.u = sampDist(Param::numU, Data::getTmxRow(tkn.z),
+					Data::rnd[rndPos]);
+			INC_RND_ST_POS(rndPos);
+			ds.cntZ[tkn.z]++;
+#pragma omp atomic
+			Data::getCntWURow(tkn.w)[tkn.u]++;
+		}
+
+		delete[] availZ;
+	}
+
+	Data::rndStPos = (Data::rndStPos + RND_ST_INC1) % RND_LENGTH;
+
+#pragma omp parallel for
+	for (topic_id u = 0; u < Param::numU; u++) {
+		num sum = 0;
+		for (word_id w = 0; w < Param::numWord; w++) {
+			sum += Data::getCntWURow(w)[u];
+		}
+		Data::cntU[u] = sum;
+	}
+}
+
 void Alg::testStateInit() {
 #pragma omp parallel for schedule(dynamic)
 	for (doc_id i = 0; i < Param::numTestDoc; i++) {
@@ -246,6 +290,81 @@ void Alg::trainGibbsSamp() {
 
 	Data::rndStPos = (Data::rndStPos + RND_ST_INC1) % RND_LENGTH;
 }
+
+void Alg::unlabelledGibbsSamp() {
+	if(Data::unlabelledDocStates == NULL) return;
+
+#pragma omp parallel for schedule(dynamic)
+	for (doc_id d = 0; d < Param::numUnlabelledDoc; d++) {
+		size_t rndPos = (Data::rndStPos + d * (size_t) RND_ST_INC2) % RND_LENGTH;
+		Data::doc_state& ds = Data::unlabelledDocStates[d];
+
+		topic_id numAvailZ = cntZNum(ALL_LABELS);
+		topic_id* availZ = new topic_id[numAvailZ];
+		listZ(ALL_LABELS, availZ);
+
+		double* aU = new double[Param::numU];
+		size_t distLen = (Param::numU > numAvailZ ? Param::numU : numAvailZ);
+		double* dist = new double[distLen];
+		double betaNumW = Param::beta * Param::numWord;
+		for (size_t u = 0; u < Param::numU; u++) {
+			aU[u] = 0;
+			for (size_t zi = 0; zi < numAvailZ; zi++) {
+				aU[u] += (Data::getTmxRow(availZ[zi])[u]) * (Param::alpha + ds.cntZ[availZ[zi]]);
+			}
+		}
+		for (size_t p = 0; p < ds.length; p++) {
+			Data::zuw cpy = ds.tokens[p];
+			for (size_t u = 0; u < Param::numU; u++) {
+				if (cpy.u == u) {
+					dist[u] = (aU[u] - Data::getTmxRow(cpy.z)[u])
+							* (Data::getCntWURow(cpy.w)[u] - 1 + Param::beta)
+							/ (Data::cntU[u] - 1 + betaNumW);
+				} else {
+					dist[u] = (aU[u] - Data::getTmxRow(cpy.z)[u])
+							* (Data::getCntWURow(cpy.w)[u] + Param::beta)
+							/ (Data::cntU[u] + betaNumW);
+				}
+			}
+			topic_id newU = sampDist(Param::numU, dist, Data::rnd[rndPos]);
+			INC_RND_ST_POS(rndPos);
+			for (size_t zi = 0; zi < numAvailZ; zi++) {
+				if (cpy.z == availZ[zi]) {
+					dist[zi] = (ds.cntZ[availZ[zi]] - 1 + Param::alpha)
+							* Data::getTmxRow(availZ[zi])[newU];
+				} else {
+					dist[zi] = (ds.cntZ[availZ[zi]] + Param::alpha)
+							* Data::getTmxRow(availZ[zi])[newU];
+				}
+			}
+			topic_id newZ = availZ[sampDist(numAvailZ, dist, Data::rnd[rndPos])];
+			INC_RND_ST_POS(rndPos);
+			ds.tokens[p].z = newZ;
+			ds.tokens[p].u = newU;
+			ds.cntZ[cpy.z]--;
+			ds.cntZ[newZ]++;
+			for (size_t u = 0; u < Param::numU; u++) {
+				aU[u] += (Data::getTmxRow(newZ)[u])
+						- (Data::getTmxRow(cpy.z)[u]);
+			}
+#pragma omp atomic
+			Data::getCntWURow(cpy.w)[cpy.u]--;
+#pragma omp atomic
+			Data::cntU[cpy.u]--;
+#pragma omp atomic
+			Data::getCntWURow(cpy.w)[newU]++;
+#pragma omp atomic
+			Data::cntU[newU]++;
+		}
+
+		delete[] aU;
+		delete[] dist;
+		delete[] availZ;
+	}
+
+	Data::rndStPos = (Data::rndStPos + RND_ST_INC1) % RND_LENGTH;
+}
+
 void Alg::testGibbsSamp() {
 #pragma omp parallel for schedule(dynamic)
 	for (doc_id d = 0; d < Param::numTestDoc; d++) {
@@ -310,6 +429,17 @@ void Alg::accumZUCnt() {
 #pragma omp atomic
 			Data::trainZUDistAccum[tkn->z * (size_t) Param::numU + tkn->u] += 1;
 		}
+	}
+
+	if(Param::unlabelledUpdateTmx > 0.0) {
+#pragma omp parallel for schedule(dynamic)
+	for (size_t i = 0; i < Param::numUnlabelledDoc; i++) {
+		for (size_t j = 0; j < Data::unlabelledDocStates[i].length; j++) {
+			Data::zuw* tkn = Data::unlabelledDocStates[i].tokens + j;
+#pragma omp atomic
+			Data::trainZUDistAccum[tkn->z * (size_t) Param::numU + tkn->u] += Param::unlabelledUpdateTmx;
+		}
+	}
 	}
 }
 
@@ -567,6 +697,7 @@ void Alg::trainEmItr() {
 				<< (i + 1) << std::endl;
 #endif
 		trainGibbsSamp();
+		unlabelledGibbsSamp();
 		if (i + Param::trainGibbsAccum >= Param::trainGibbsIter) {
 			accumZUCnt();
 		}
@@ -592,6 +723,7 @@ void Alg::testItr(num trainIterNum) {
 
 void Alg::testWhileTrain() {
 	trainStateInit();
+	unlabelledStateInit();
 	for (int i = 0; i < Param::trainEmIter; i++) {
 #ifdef VERBOSE_EM
 		std::cout << getCurrentTimeString() << " Start EM training #" << (i + 1)

@@ -31,6 +31,7 @@ public:
 	} doc_state;
 
 	static doc_state* trainDocStates;
+	static doc_state* unlabelledDocStates;
 	static doc_state* testDocStates;
 	static double* tmx;
 	static num* cntWU;
@@ -54,6 +55,7 @@ public:
 	static void initRnd();
 	static void loadTrainData();
 	static void loadTestData();
+	static void loadUnlabelledData();
 	static void initCounts();
 	static void initAccum();
 	static void initTmx();

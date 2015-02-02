@@ -19,14 +19,15 @@ double Param::alpha, Param::beta;
 num Param::trainEmIter, Param::trainGibbsIter, Param::testGibbsIter,
 		Param::testEmFreq;
 num Param::trainGibbsAccum, Param::testGibbsAccum;
-std::string Param::trainDataPath, Param::testDataPath, Param::testResultPath;
-doc_id Param::numTrainDoc, Param::numTestDoc;
+std::string Param::trainDataPath, Param::testDataPath, Param::testResultPath, Param::unlabelledPath;
+doc_id Param::numTrainDoc, Param::numTestDoc, Param::numUnlabelledDoc;
 word_id Param::numWord;
 topic_id Param::numZ, Param::numU, Param::numBgZ, Param::numLbZ;
 label_id Param::numLabel;
 num Param::rndSeed;
 num Param::tmxRegIter;
 double Param::tmxRegCoef;
+double Param::unlabelledUpdateTmx;
 
 #define PARAM_REQUESTED(X) if(p==0){cntRequired++;}else{\
 	if(*(argv[p])=='-' && strcmp(#X,argv[p]+1)==0){\
@@ -58,6 +59,8 @@ void Param::parseArgs(int argc, char **argv) {
 		PARAM_DEFAULT(tmxRegIter, 0);
 		PARAM_DEFAULT(tmxRegCoef, 0.0);
 		PARAM_DEFAULT(testResultPath, "");
+		PARAM_DEFAULT(unlabelledPath, "");
+		PARAM_DEFAULT(unlabelledUpdateTmx, 0.0);
 	}
 	if (cntFilled != cntRequired) {
 		throw std::runtime_error(

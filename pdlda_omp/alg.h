@@ -16,8 +16,10 @@ class Alg {
 public:
 	static void trainStateInit();
 	static void testStateInit();
+	static void unlabelledStateInit();
 	static void trainGibbsSamp();
 	static void testGibbsSamp();
+	static void unlabelledGibbsSamp();
 	static void clearZUCnt();
 	static void accumZUCnt();
 	static void updateTmx();

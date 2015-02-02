@@ -18,14 +18,15 @@ public:
 	static double alpha, beta;
 	static num trainEmIter, trainGibbsIter, testGibbsIter, testEmFreq;
 	static num trainGibbsAccum, testGibbsAccum;
-	static std::string trainDataPath, testDataPath, testResultPath;
-	static doc_id numTrainDoc, numTestDoc;
+	static std::string trainDataPath, testDataPath, testResultPath, unlabelledPath;
+	static doc_id numTrainDoc, numTestDoc, numUnlabelledDoc;
 	static word_id numWord;
 	static topic_id numZ, numU, numBgZ, numLbZ;
 	static label_id numLabel;
 	static num rndSeed;
 	static num tmxRegIter;
 	static double tmxRegCoef;
+	static double unlabelledUpdateTmx;
 
 	static void parseArgs(int argc, char **argv);
 };
