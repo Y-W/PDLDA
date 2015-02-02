@@ -31,7 +31,8 @@ uint32_t* Data::rnd;
 std::size_t Data::rndStPos = 0;
 std::map<std::string, word_id> Data::wordStrMap;
 std::map<std::string, label_id> Data::labelStrMap;
-num* Data::testLabelDistAccum, *Data::trainZUDistAccum;
+num* Data::testLabelDistAccum, *Data::trainZUDistAccum, *Data::trainWUAccum,
+		*Data::trainUAccum;
 
 #ifdef DATALOADER_SHUFFLE_WORD_ORDER
 static int rndP = 0;
@@ -245,7 +246,7 @@ void Data::loadTestData() {
 void Data::loadUnlabelledData() {
 	unlabelledDocStates = NULL;
 	Param::numUnlabelledDoc = 0;
-	if(!Param::unlabelledPath.empty()) {
+	if (!Param::unlabelledPath.empty()) {
 		std::ifstream bookFile_unlabelled(Param::unlabelledPath.c_str());
 		string line;
 		vector<Doc> tmpDocs;
@@ -303,9 +304,9 @@ void Data::loadUnlabelledData() {
 				}
 			}
 
-	#ifdef DATALOADER_SHUFFLE_WORD_ORDER
+#ifdef DATALOADER_SHUFFLE_WORD_ORDER
 			std::random_shuffle(doc.words.begin(), doc.words.end(), tmpRandFn);
-	#endif
+#endif
 
 			std::vector<word_id>(doc.words).swap(doc.words); // to shrink the capacity of words
 
@@ -319,7 +320,8 @@ void Data::loadUnlabelledData() {
 		Param::numUnlabelledDoc = tmpDocs.size();
 
 		zuw* tokenSpace = new zuw[totalTokens];
-		num* cntZSpace = new num[Param::numZ * (std::size_t) Param::numUnlabelledDoc];
+		num* cntZSpace = new num[Param::numZ
+				* (std::size_t) Param::numUnlabelledDoc];
 		unlabelledDocStates = new doc_state[Param::numUnlabelledDoc];
 
 		for (std::size_t i = 0; i < Param::numUnlabelledDoc; i++) {
@@ -329,7 +331,7 @@ void Data::loadUnlabelledData() {
 			tokenSpace += unlabelledDocStates[i].length;
 			unlabelledDocStates[i].cntZ = cntZSpace;
 			cntZSpace += Param::numZ;
-	#pragma omp parallel for
+#pragma omp parallel for
 			for (std::size_t j = 0; j < unlabelledDocStates[i].length; j++) {
 				unlabelledDocStates[i].tokens[j].w = tmpDocs[i].words[j];
 			}
@@ -346,6 +348,8 @@ void Data::initAccum() {
 	testLabelDistAccum = new num[Param::numTestDoc
 			* (std::size_t) Param::numLabel];
 	trainZUDistAccum = new num[Param::numZ * (std::size_t) Param::numU];
+	trainWUAccum = new num[Param::numWord * (std::size_t) Param::numU];
+	trainUAccum = new num[Param::numU];
 }
 
 void Data::initTmx() {
@@ -360,6 +364,28 @@ void Data::initRnd() {
 	MTRand_int32 mtRand(Param::rndSeed);
 	for (std::size_t i = 0; i < RND_LENGTH; i++) {
 		rnd[i] = mtRand();
+	}
+}
+
+void Data::printTrainAccumWU() {
+	if (!Param::modelTopicPath.empty()) {
+			std::ofstream modelTopic(Param::modelTopicPath.c_str(),
+					std::ofstream::out | std::ofstream::app);
+			for(std::map<std::string, word_id>::iterator it=wordStrMap.begin(); it!=wordStrMap.end(); it++) {
+				modelTopic << it->first<< ", " << get1dArrayStr(Param::numU, getAccumWURow(it->second)) << std::endl;
+			}
+			modelTopic << std::endl;
+			modelTopic.flush();
+			modelTopic.close();
+		}
+}
+void Data::printTmx() {
+	if (!Param::modelTmxPath.empty()) {
+		std::ofstream modelTmx(Param::modelTmxPath.c_str(),
+				std::ofstream::out | std::ofstream::app);
+		modelTmx << get2dArrayStr(Param::numZ, Param::numU, tmx) << std::endl;
+		modelTmx.flush();
+		modelTmx.close();
 	}
 }
 
@@ -380,6 +406,8 @@ void Data::destroy() {
 	delete[] cntU;
 	delete[] testLabelDistAccum;
 	delete[] trainZUDistAccum;
+	delete[] trainWUAccum;
+	delete[] trainUAccum;
 	delete[] trainDocStates[0].tokens;
 	delete[] trainDocStates[0].cntZ;
 	delete[] trainDocStates;

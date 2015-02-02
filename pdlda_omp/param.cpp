@@ -16,10 +16,10 @@
 using namespace pdlda;
 
 double Param::alpha, Param::beta;
-num Param::trainEmIter, Param::trainGibbsIter, Param::testGibbsIter,
-		Param::testEmFreq;
+num Param::trainEmIter, Param::trainGibbsIter, Param::testGibbsIter;
 num Param::trainGibbsAccum, Param::testGibbsAccum;
-std::string Param::trainDataPath, Param::testDataPath, Param::testResultPath, Param::unlabelledPath;
+std::string Param::trainDataPath, Param::testDataPath, Param::testResultPath, Param::unlabelledPath,
+Param::modelTmxPath, Param::modelTopicPath;
 doc_id Param::numTrainDoc, Param::numTestDoc, Param::numUnlabelledDoc;
 word_id Param::numWord;
 topic_id Param::numZ, Param::numU, Param::numBgZ, Param::numLbZ;
@@ -47,7 +47,6 @@ void Param::parseArgs(int argc, char **argv) {
 		PARAM_REQUESTED(trainEmIter);
 		PARAM_REQUESTED(trainGibbsIter);
 		PARAM_REQUESTED(testGibbsIter);
-		PARAM_REQUESTED(testEmFreq);
 		PARAM_REQUESTED(trainGibbsAccum);
 		PARAM_REQUESTED(testGibbsAccum);
 		PARAM_REQUESTED(trainDataPath);
@@ -60,6 +59,8 @@ void Param::parseArgs(int argc, char **argv) {
 		PARAM_DEFAULT(tmxRegCoef, 0.0);
 		PARAM_DEFAULT(testResultPath, "");
 		PARAM_DEFAULT(unlabelledPath, "");
+		PARAM_DEFAULT(modelTmxPath, "");
+		PARAM_DEFAULT(modelTopicPath, "");
 		PARAM_DEFAULT(unlabelledUpdateTmx, 0.0);
 	}
 	if (cntFilled != cntRequired) {

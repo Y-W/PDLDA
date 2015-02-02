@@ -43,13 +43,17 @@ public:
 	static std::map<std::string, word_id> wordStrMap;
 	static std::map<std::string, label_id> labelStrMap;
 
-	static num *testLabelDistAccum, *trainZUDistAccum;
+	static num *testLabelDistAccum, *trainZUDistAccum, *trainWUAccum,
+			*trainUAccum;
 
 	static inline double* getTmxRow(topic_id z) {
 		return tmx + Param::numU * (std::size_t) z;
 	}
 	static inline num* getCntWURow(word_id w) {
 		return cntWU + Param::numU * (std::size_t) w;
+	}
+	static inline num* getAccumWURow(word_id w) {
+		return trainWUAccum + Param::numU * (std::size_t) w;
 	}
 
 	static void initRnd();
@@ -62,8 +66,11 @@ public:
 	static void init();
 	static void destroy();
 
+	static void printTrainAccumWU();
+	static void printTmx();
+
 	template<typename T>
-	static std::string get1dArrayStr(size_t s, T* arr){
+	static std::string get1dArrayStr(size_t s, T* arr) {
 		std::stringstream tmp;
 		for (size_t i = 0; i < s - 1; i++) {
 			tmp << arr[i] << ", ";
@@ -73,10 +80,10 @@ public:
 	}
 
 	template<typename T>
-	static std::string get2dArrayStr(size_t r, size_t c, T* arr){
+	static std::string get2dArrayStr(size_t r, size_t c, T* arr) {
 		std::stringstream tmp;
 		for (size_t i = 0; i < r; i++) {
-			tmp << get1dArrayStr(c, arr+i*c) << std::endl;
+			tmp << get1dArrayStr(c, arr + i * c) << std::endl;
 		}
 		return tmp.str();
 	}

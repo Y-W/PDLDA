@@ -150,7 +150,8 @@ void Alg::trainStateInit() {
 #define ALL_LABELS ((label_set)((1 << Param::numLabel) - 1))
 
 void Alg::unlabelledStateInit() {
-	if(Data::unlabelledDocStates == NULL) return;
+	if (Data::unlabelledDocStates == NULL)
+		return;
 
 #pragma omp parallel for schedule(dynamic)
 	for (doc_id i = 0; i < Param::numUnlabelledDoc; i++) {
@@ -236,7 +237,8 @@ void Alg::trainGibbsSamp() {
 		for (size_t u = 0; u < Param::numU; u++) {
 			aU[u] = 0;
 			for (size_t zi = 0; zi < numAvailZ; zi++) {
-				aU[u] += (Data::getTmxRow(availZ[zi])[u]) * (Param::alpha + ds.cntZ[availZ[zi]]);
+				aU[u] += (Data::getTmxRow(availZ[zi])[u])
+						* (Param::alpha + ds.cntZ[availZ[zi]]);
 			}
 		}
 		for (size_t p = 0; p < ds.length; p++) {
@@ -292,7 +294,8 @@ void Alg::trainGibbsSamp() {
 }
 
 void Alg::unlabelledGibbsSamp() {
-	if(Data::unlabelledDocStates == NULL) return;
+	if (Data::unlabelledDocStates == NULL)
+		return;
 
 #pragma omp parallel for schedule(dynamic)
 	for (doc_id d = 0; d < Param::numUnlabelledDoc; d++) {
@@ -310,7 +313,8 @@ void Alg::unlabelledGibbsSamp() {
 		for (size_t u = 0; u < Param::numU; u++) {
 			aU[u] = 0;
 			for (size_t zi = 0; zi < numAvailZ; zi++) {
-				aU[u] += (Data::getTmxRow(availZ[zi])[u]) * (Param::alpha + ds.cntZ[availZ[zi]]);
+				aU[u] += (Data::getTmxRow(availZ[zi])[u])
+						* (Param::alpha + ds.cntZ[availZ[zi]]);
 			}
 		}
 		for (size_t p = 0; p < ds.length; p++) {
@@ -384,8 +388,8 @@ void Alg::testGibbsSamp() {
 			Data::zuw cpy = ds.tokens[p];
 			for (size_t u = 0; u < Param::numU; u++) {
 				dist[u] = (aU[u] - Data::getTmxRow(cpy.z)[u])
-						* (Data::getCntWURow(cpy.w)[u] + Param::beta)
-						/ (Data::cntU[u] + betaNumW);
+						* (Data::getAccumWURow(cpy.w)[u] + Param::beta)
+						/ (Data::trainUAccum[u] + betaNumW);
 			}
 			topic_id newU = sampDist(Param::numU, dist, Data::rnd[rndPos]);
 			INC_RND_ST_POS(rndPos);
@@ -415,13 +419,21 @@ void Alg::testGibbsSamp() {
 
 	Data::rndStPos = (Data::rndStPos + RND_ST_INC1) % RND_LENGTH;
 }
-void Alg::clearZUCnt() {
+void Alg::clearTrainAccum() {
 #pragma omp parallel for
 	for (size_t i = 0; i < Param::numZ * (size_t) Param::numU; i++) {
 		Data::trainZUDistAccum[i] = 0;
 	}
+#pragma omp parallel for
+	for (size_t i = 0; i < Param::numWord * (std::size_t) Param::numU; i++) {
+		Data::trainWUAccum[i] = 0;
+	}
+#pragma omp parallel for
+	for (size_t i = 0; i < Param::numU; i++) {
+		Data::trainUAccum[i] = 0;
+	}
 }
-void Alg::accumZUCnt() {
+void Alg::accumTrain() {
 #pragma omp parallel for schedule(dynamic)
 	for (size_t i = 0; i < Param::numTrainDoc; i++) {
 		for (size_t j = 0; j < Data::trainDocStates[i].length; j++) {
@@ -431,15 +443,25 @@ void Alg::accumZUCnt() {
 		}
 	}
 
-	if(Param::unlabelledUpdateTmx > 0.0) {
+	if (Param::unlabelledUpdateTmx > 0.0) {
 #pragma omp parallel for schedule(dynamic)
-	for (size_t i = 0; i < Param::numUnlabelledDoc; i++) {
-		for (size_t j = 0; j < Data::unlabelledDocStates[i].length; j++) {
-			Data::zuw* tkn = Data::unlabelledDocStates[i].tokens + j;
+		for (size_t i = 0; i < Param::numUnlabelledDoc; i++) {
+			for (size_t j = 0; j < Data::unlabelledDocStates[i].length; j++) {
+				Data::zuw* tkn = Data::unlabelledDocStates[i].tokens + j;
 #pragma omp atomic
-			Data::trainZUDistAccum[tkn->z * (size_t) Param::numU + tkn->u] += Param::unlabelledUpdateTmx;
+				Data::trainZUDistAccum[tkn->z * (size_t) Param::numU + tkn->u] +=
+						Param::unlabelledUpdateTmx;
+			}
 		}
 	}
+
+#pragma omp parallel for
+	for (size_t i = 0; i < Param::numWord * (std::size_t) Param::numU; i++) {
+		Data::trainWUAccum[i] += Data::cntWU[i];
+	}
+#pragma omp parallel for
+	for (size_t i = 0; i < Param::numU; i++) {
+		Data::trainUAccum[i] += Data::cntU[i];
 	}
 }
 
@@ -690,7 +712,7 @@ void Alg::judgeTest(num trainIterNum) {
 }
 
 void Alg::trainEmItr() {
-	clearZUCnt();
+	clearTrainAccum();
 	for (int i = 0; i < Param::trainGibbsIter; i++) {
 #ifdef VERBOSE_GIBBS
 		std::cout << getCurrentTimeString() << " Start Gibbs training #"
@@ -699,7 +721,7 @@ void Alg::trainEmItr() {
 		trainGibbsSamp();
 		unlabelledGibbsSamp();
 		if (i + Param::trainGibbsAccum >= Param::trainGibbsIter) {
-			accumZUCnt();
+			accumTrain();
 		}
 	}
 	updateTmx();
@@ -730,12 +752,11 @@ void Alg::testWhileTrain() {
 				<< std::endl;
 #endif
 		trainEmItr();
-		if ((i + 1) % Param::testEmFreq == 0) {
-#ifdef VERBOSE_EM
-			std::cout << getCurrentTimeString() << " Starting testing #"
-					<< (i + 1) << std::endl;
-#endif
-			testItr(i + 1);
-		}
 	}
+	Data::printTmx();
+	Data::printTrainAccumWU();
+#ifdef VERBOSE_EM
+	std::cout << getCurrentTimeString() << " Starting testing" << std::endl;
+#endif
+	testItr(Param::trainEmIter);
 }

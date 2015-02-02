@@ -20,8 +20,8 @@ public:
 	static void trainGibbsSamp();
 	static void testGibbsSamp();
 	static void unlabelledGibbsSamp();
-	static void clearZUCnt();
-	static void accumZUCnt();
+	static void clearTrainAccum();
+	static void accumTrain();
 	static void updateTmx();
 	static void clearTestLabelCnt();
 	static void accumTestLabelCnt();

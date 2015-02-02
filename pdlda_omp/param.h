@@ -16,9 +16,9 @@ namespace pdlda {
 class Param {
 public:
 	static double alpha, beta;
-	static num trainEmIter, trainGibbsIter, testGibbsIter, testEmFreq;
+	static num trainEmIter, trainGibbsIter, testGibbsIter;
 	static num trainGibbsAccum, testGibbsAccum;
-	static std::string trainDataPath, testDataPath, testResultPath, unlabelledPath;
+	static std::string trainDataPath, testDataPath, testResultPath, unlabelledPath, modelTmxPath, modelTopicPath;
 	static doc_id numTrainDoc, numTestDoc, numUnlabelledDoc;
 	static word_id numWord;
 	static topic_id numZ, numU, numBgZ, numLbZ;
